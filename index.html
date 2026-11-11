@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>교수님 정강이 차기 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{--chalk:#f4f1d8;--wood:#8a6a45;--yellow:#ffd23f;--red:#e5383b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#17241d;color:var(--chalk);
+  font-family:'Jua','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
+  user-select:none;-webkit-user-select:none;touch-action:none}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+
+#hud{position:fixed;left:0;right:0;top:0;display:flex;gap:10px;justify-content:space-between;align-items:flex-start;padding:12px;pointer-events:none;z-index:4}
+.panel{background:rgba(22,44,34,.86);border:3px solid var(--wood);border-radius:14px;padding:6px 12px;text-align:center;box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.lbl{font-size:12px;opacity:.75;line-height:1.2}
+.val{font-size:26px;line-height:1.1}
+#weekPanel{flex:1;max-width:330px;text-align:left}
+#weekBar{height:14px;border-radius:8px;background:rgba(0,0,0,.45);overflow:hidden;margin:4px 0 2px}
+#weekFill{display:block;height:100%;width:0;background:linear-gradient(90deg,#5ee08a,#ffd23f);transition:width .25s}
+#weekTxt{font-size:15px}
+#timePanel{min-width:84px}
+#timeTxt.low{color:#ff6b6b;animation:blink .5s infinite alternate}
+#scorePanel{min-width:110px}
+#comboTxt{font-size:15px;color:var(--yellow);height:18px}
+@keyframes blink{to{opacity:.4}}
+
+#mute{position:fixed;right:12px;bottom:12px;z-index:6;width:44px;height:44px;border-radius:50%;border:3px solid var(--wood);background:rgba(22,44,34,.86);font-size:20px;color:#fff;cursor:pointer}
+#help{position:fixed;left:0;right:0;bottom:10px;text-align:center;font-size:13px;opacity:.85;pointer-events:none;z-index:3;text-shadow:0 1px 3px #000;padding:0 64px}
+#kickBtn{display:none;position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:5;width:104px;height:104px;border-radius:50%;
+  border:5px solid #fff;background:radial-gradient(circle at 35% 30%,#ff7b7b,#d8202a);color:#fff;font:inherit;font-size:22px;box-shadow:0 6px 0 #7d0f15,0 10px 18px rgba(0,0,0,.45)}
+#kickBtn:active{transform:translateX(-50%) translateY(4px);box-shadow:0 2px 0 #7d0f15}
+@media (pointer:coarse){#kickBtn.on{display:block}#help{bottom:150px}}
+
+#popLayer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:4}
+.pop{position:absolute;transform:translate(-50%,-50%);font-size:34px;color:var(--yellow);text-shadow:0 3px 0 #000,0 0 8px #000;animation:floatUp .95s ease-out forwards;white-space:nowrap}
+.pop.big{font-size:58px}
+.pop.combo{color:#7df0ff;font-size:28px}
+@keyframes floatUp{0%{opacity:0;transform:translate(-50%,-30%) scale(.5)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.25)}100%{opacity:0;transform:translate(-50%,-190%) scale(1)}}
+
+#bubble{position:fixed;left:0;top:0;transform:translate(-50%,-100%);pointer-events:none;display:none;z-index:5;max-width:min(86vw,520px);text-align:center}
+#bubble .in{position:relative;padding:10px 22px;border-radius:28px;background:#fff;color:#222;border:4px solid #222;font-size:clamp(18px,3.4vw,28px);box-shadow:0 5px 0 rgba(0,0,0,.3);margin-bottom:20px}
+#bubble .in::after{content:'';position:absolute;left:50%;bottom:-24px;margin-left:-12px;border:12px solid transparent;border-top:20px solid #222;border-bottom:0}
+#bubble.yell .in{background:#fff36b;color:#c4151c;border-color:#c4151c;font-size:clamp(30px,7vw,60px);padding:8px 26px;text-shadow:2px 2px 0 #fff;animation:shake .1s infinite alternate}
+#bubble.yell .in::after{border-top-color:#c4151c}
+@keyframes shake{from{transform:rotate(-3deg) scale(1)}to{transform:rotate(2.5deg) scale(1.06)}}
+
+#overlay{position:fixed;inset:0;z-index:10;display:none;align-items:center;justify-content:center;background:rgba(8,20,14,.74);backdrop-filter:blur(3px);padding:16px}
+#overlay.show{display:flex}
+.card{max-width:520px;width:100%;text-align:center;background:#24493a;border:8px solid #7a5230;border-radius:18px;padding:22px 22px 20px;box-shadow:0 10px 30px rgba(0,0,0,.6),inset 0 0 40px rgba(0,0,0,.25)}
+.card h1{margin:0 0 6px;font-size:clamp(30px,7vw,44px);font-weight:400;color:#fff6c9;line-height:1.15}
+.card .sub{font-size:clamp(15px,3.6vw,19px);line-height:1.5;margin:6px 0 12px}
+.card .sub b{color:var(--yellow);font-weight:400}
+.card .keys{font-size:14px;line-height:1.7;background:rgba(0,0,0,.22);border-radius:12px;padding:8px 12px;margin:10px 0 14px;text-align:left}
+.card .fine{font-size:12px;opacity:.7;margin-top:12px}
+.card .stat{font-size:20px;margin:4px 0}
+.btn{font:inherit;font-size:24px;color:#3a2200;background:var(--yellow);border:0;border-radius:14px;padding:10px 34px;cursor:pointer;box-shadow:0 5px 0 #b98a00}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #b98a00}
+
+#err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:20;background:#17241d;font-size:20px;text-align:center;padding:24px}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div id="hud">
+  <div class="panel" id="weekPanel">
+    <div class="lbl">종강까지</div>
+    <div id="weekBar"><i id="weekFill"></i></div>
+    <div id="weekTxt">0 / 16주차</div>
+  </div>
+  <div class="panel" id="timePanel"><div class="lbl">남은 시간</div><div class="val" id="timeTxt">75</div></div>
+  <div class="panel" id="scorePanel"><div class="lbl">점수</div><div class="val" id="scoreTxt">0</div><div id="comboTxt"></div></div>
+</div>
+
+<div id="popLayer"></div>
+<div id="bubble"><div class="in" id="bubbleTxt"></div></div>
+<div id="help">마우스 이동: 조준 · 클릭 / Space: 발차기 · A D / ← → : 이동 · 터치: 드래그로 조준, 탭하면 발차기</div>
+<button id="kickBtn" aria-label="발차기">🦵<br>KICK</button>
+<button id="mute" aria-label="소리 켜기/끄기">🔊</button>
+
+<div id="overlay" class="show"><div class="card" id="card"></div></div>
+<div id="err">3D 엔진(three.js)을 불러오지 못했어요.<br>네트워크 상태를 확인하고 새로고침해 주세요.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+if (typeof THREE === 'undefined') { $('err').style.display = 'flex'; return; }
+
+/* ================= 상수 ================= */
+const TOTAL = 16, TIME_LIMIT = 75;
+const XMAX = 3.5, PROF_Z = 1.4, STUDENT_Z = 4.6, LEG_OFF = 0.28, HIT_W = 0.62;
+const HIT_DUR = 1.55;
+const YELL = '아이고 종강이야~';
+const LECTURE = ['이 부분은 시험에 나옵니다~','자, 출석 체크하겠습니다.','이건 기초 중의 기초죠.','과제는 A4 20장입니다.','질문 있나요? …없죠?','다음 주는 중간고사입니다.','졸지 마세요, 다 보입니다.'];
+
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const lerp = (a,b,t) => a + (b-a)*t;
+const sstep = (a,b,x) => { const t = clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); };
+const rand = (a,b) => a + Math.random()*(b-a);
+
+/* ================= 렌더러 / 씬 ================= */
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+$('stage').appendChild(renderer.domElement);
+const dom = renderer.domElement;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xdbe7dc);
+scene.fog = new THREE.Fog(0xdbe7dc, 18, 42);
+const camera = new THREE.PerspectiveCamera(66, 1, 0.1, 80);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9a8666, 0.95));
+const sun = new THREE.DirectionalLight(0xfff1d6, 0.6);
+sun.position.set(3, 9, 8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, {left:-8, right:8, top:8, bottom:-8, near:1, far:30});
+sun.shadow.bias = -0.0008;
+sun.shadow.camera.updateProjectionMatrix();
+scene.add(sun);
+
+/* ================= 헬퍼 ================= */
+const matCache = {};
+function mat(c){ return matCache[c] || (matCache[c] = new THREE.MeshLambertMaterial({color:c})); }
+const box = (w,h,d) => new THREE.BoxGeometry(w,h,d);
+const sph = (r,ws,hs) => new THREE.SphereGeometry(r, ws||20, hs||16);
+function add(parent, geo, color, x, y, z, shadow){
+  const m = new THREE.Mesh(geo, typeof color === 'number' ? mat(color) : color);
+  m.position.set(x||0, y||0, z||0);
+  if (shadow !== false) m.castShadow = true;
+  parent.add(m);
+  return m;
+}
+function canvasTex(w,h,draw,rep){
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (rep){ t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); }
+  t.anisotropy = 4;
+  return t;
+}
+
+/* ================= 강의실 ================= */
+function buildRoom(){
+  // 바닥
+  const floorTex = canvasTex(512,512,(g,w,h)=>{
+    const rows = 8, ph = h/rows;
+    for (let r=0;r<rows;r++){
+      let x = -(r%2)*w/4;
+      while (x < w){
+        const pw = w/2;
+        g.fillStyle = `hsl(${28+Math.random()*6},${42+Math.random()*10}%,${46+Math.random()*9}%)`;
+        g.fillRect(x, r*ph, pw, ph);
+        g.strokeStyle = 'rgba(70,40,15,.18)'; g.lineWidth = 1;
+        for (let k=0;k<4;k++){ const yy = r*ph + rand(4,ph-4); g.beginPath(); g.moveTo(x+rand(0,20), yy); g.lineTo(x+pw-rand(0,20), yy+rand(-2,2)); g.stroke(); }
+        g.strokeStyle = 'rgba(60,34,12,.55)'; g.lineWidth = 2;
+        g.strokeRect(x, r*ph, pw, ph);
+        x += pw;
+      }
+    }
+  }, [6.5,3.5]);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(26,14), new THREE.MeshLambertMaterial({map:floorTex}));
+  floor.rotation.x = -Math.PI/2; floor.position.set(0,0,2.5); floor.receiveShadow = true;
+  scene.add(floor);
+
+  // 벽
+  add(scene, new THREE.PlaneGeometry(26,9), 0xece4d0, 0,4.5,-4.2, false);
+  add(scene, box(26,2.2,0.14), 0x6f9a85, 0,1.1,-4.13, false);
+  const wl = add(scene, new THREE.PlaneGeometry(14,9), 0xe3dcc8, -9.8,4.5,2.5, false); wl.rotation.y = Math.PI/2;
+  const wr = add(scene, new THREE.PlaneGeometry(14,9), 0xe3dcc8,  9.8,4.5,2.5, false); wr.rotation.y = -Math.PI/2;
+  const ce = add(scene, new THREE.PlaneGeometry(26,14), 0xfafafa, 0,9,2.5, false); ce.rotation.x = Math.PI/2;
+  for (let i=-1;i<=1;i++) for (let j=0;j<3;j++){
+    add(scene, box(3.2,0.1,0.8), new THREE.MeshBasicMaterial({color:0xffffff}), i*7, 8.92, -1+j*4, false);
+  }
+
+  // 창문
+  [-1,1].forEach(s=>{
+    [-1.5,2.5,6.5].forEach(z=>{
+      add(scene, new THREE.PlaneGeometry(2.6,2.6), new THREE.MeshBasicMaterial({color:0xcfeeff}), s*9.74, 4.2, z, false).rotation.y = -s*Math.PI/2;
+      add(scene, box(0.1,2.8,2.9), 0x7a5230, s*9.72, 4.2, z, false);
+      add(scene, box(0.12,2.7,0.08), 0xffffff, s*9.68, 4.2, z, false);
+      add(scene, box(0.12,0.08,2.6), 0xffffff, s*9.68, 4.2, z, false);
+    });
+  });
+
+  // 칠판 (동적 텍스처)
+  const bc = document.createElement('canvas'); bc.width = 1024; bc.height = 340;
+  const bt = new THREE.CanvasTexture(bc); bt.anisotropy = 4;
+  const bm = new THREE.Mesh(new THREE.PlaneGeometry(11.4,3.8), new THREE.MeshBasicMaterial({map:bt}));
+  bm.position.set(0,4.3,-4.05); scene.add(bm);
+  add(scene, box(11.8,0.2,0.2), 0x7a5230, 0,6.3,-4.05, false);
+  add(scene, box(11.8,0.2,0.2), 0x7a5230, 0,2.3,-4.05, false);
+  add(scene, box(0.2,4,0.2), 0x7a5230, -5.8,4.3,-4.05, false);
+  add(scene, box(0.2,4,0.2), 0x7a5230,  5.8,4.3,-4.05, false);
+  add(scene, box(9,0.12,0.4), 0x5d3f22, 0,2.2,-3.9, false);
+  add(scene, box(0.5,0.1,0.14), 0xffffff, -1.5,2.31,-3.9, false);
+
+  // 시계
+  add(scene, new THREE.CircleGeometry(0.75,32), 0xffffff, 0,7.6,-4.1, false);
+  const ring = add(scene, new THREE.TorusGeometry(0.75,0.07,8,32), 0x333333, 0,7.6,-4.08, false);
+  const hand = new THREE.Group(); hand.position.set(0,7.6,-4.05); scene.add(hand);
+  add(hand, box(0.06,0.6,0.02), 0xc4151c, 0,0.3,0, false);
+  const hand2 = new THREE.Group(); hand2.position.set(0,7.6,-4.04); scene.add(hand2);
+  add(hand2, box(0.09,0.4,0.02), 0x222222, 0,0.2,0, false);
+
+  // 교탁
+  add(scene, box(1.8,2.3,1.0), 0x8a5a33, -6,1.15,-2.2);
+  add(scene, box(2.0,0.14,1.2), 0x6d4526, -6,2.37,-2.2);
+  add(scene, new THREE.CylinderGeometry(0.14,0.12,0.3,12), 0xffffff, -5.6,2.6,-2.2);
+  // 화분
+  add(scene, new THREE.CylinderGeometry(0.45,0.35,0.8,14), 0xb35c3a, 7.3,0.4,-3);
+  add(scene, sph(0.8,12,10), 0x3f9b4a, 7.3,1.5,-3);
+  // 책상 + 의자
+  [-1,1].forEach(s=>{
+    [-1,2,5].forEach(z=>{
+      const x = s*6.7;
+      add(scene, box(2.3,0.12,1.1), 0xc9a06a, x,1.55,z);
+      [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=> add(scene, box(0.1,1.5,0.1), 0x666b73, x+a*1.0,0.75,z+b*0.45));
+      add(scene, box(0.9,0.1,0.9), 0x3f6fb0, x,1.0,z+1.1);
+      add(scene, box(0.9,0.9,0.1), 0x3f6fb0, x,1.5,z+1.55);
+      [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=> add(scene, box(0.08,1.0,0.08), 0x666b73, x+a*0.38,0.5,z+1.1+b*0.38));
+    });
+  });
+
+  // 칠판 그림 그리기
+  const g = bc.getContext('2d');
+  let seed = 7; const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+  const msgs = ['출석은 성적에 반영됩니다','시험 범위: 전부','이건 중요하니 밑줄 쫙!','과제: A4 20장','졸면 감점입니다'];
+  function drawBoard(weeks){
+    g.fillStyle = '#24493a'; g.fillRect(0,0,1024,340);
+    seed = 11; g.globalAlpha = .07; g.fillStyle = '#fff';
+    for (let i=0;i<26;i++) g.fillRect(rnd()*1024, rnd()*340, 80+rnd()*200, 6+rnd()*14);
+    g.globalAlpha = 1;
+    g.fillStyle = '#f4f1d8'; g.strokeStyle = '#f4f1d8'; g.textAlign = 'center';
+    const fam = 'Jua, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+    g.font = '120px ' + fam;
+    g.fillText(weeks >= TOTAL ? '종강!!!' : weeks + '주차', 512, 160);
+    g.font = '44px ' + fam;
+    g.fillText(weeks >= TOTAL ? '모두 수고하셨습니다 🎉' : msgs[weeks % msgs.length], 512, 240);
+    g.font = '30px ' + fam; g.globalAlpha = .6;
+    g.save(); g.translate(120,70); g.rotate(-.1); g.fillText('E = mc²', 0, 0); g.restore();
+    g.save(); g.translate(900,80); g.rotate(.08); g.fillText('∫ f(x) dx', 0, 0); g.restore();
+    g.save(); g.translate(150,300); g.rotate(.05); g.fillText('A+ ← 희망사항', 0, 0); g.restore();
+    g.save(); g.translate(880,300); g.rotate(-.04); g.fillText('D-day: 종강', 0, 0); g.restore();
+    g.globalAlpha = 1;
+    // 주차 진행 표시(분필 선)
+    g.lineWidth = 5; g.lineCap = 'round';
+    for (let i=0;i<Math.min(weeks,TOTAL);i++){ const x = 130 + i*50; g.beginPath(); g.moveTo(x,282); g.lineTo(x+rnd()*4,318); g.stroke(); }
+    bt.needsUpdate = true;
+  }
+  drawBoard(0);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(()=>drawBoard(state.weeks||0)).catch(()=>{});
+  return { drawBoard, hand, hand2 };
+}
+
+/* ================= 교수님 ================= */
+const DOWN = new THREE.Vector3(0,-1,0);
+const _q = new THREE.Quaternion(), _t = new THREE.Vector3();
+function placeBone(mesh, a, b){
+  mesh.position.copy(a).add(b).multiplyScalar(0.5);
+  _t.subVectors(b, a).normalize();
+  _q.setFromUnitVectors(DOWN, _t);
+  mesh.quaternion.copy(_q);
+}
+const _d = new THREE.Vector3(), _dn = new THREE.Vector3(), _pv = new THREE.Vector3(), _E = new THREE.Vector3(), _H = new THREE.Vector3();
+function solveArm(arm, target, pole){
+  const A = 0.55, B = 0.55, S = arm.S;
+  _d.subVectors(target, S);
+  let dist = _d.length();
+  const maxR = A + B - 0.03, minR = 0.25;
+  if (dist < 1e-4){ _d.set(0,-1,0); dist = 1; }
+  if (dist > maxR){ _d.multiplyScalar(maxR/dist); dist = maxR; }
+  else if (dist < minR){ _d.multiplyScalar(minR/dist); dist = minR; }
+  _dn.copy(_d).normalize();
+  const x = (A*A - B*B + dist*dist) / (2*dist);
+  const h = Math.sqrt(Math.max(0, A*A - x*x));
+  _pv.copy(pole); _pv.addScaledVector(_dn, -_pv.dot(_dn));
+  if (_pv.lengthSq() < 1e-6) _pv.set(0,0,-1);
+  _pv.normalize();
+  _E.copy(S).addScaledVector(_dn, x).addScaledVector(_pv, h);
+  _H.copy(S).add(_d);
+  placeBone(arm.upper, S, _E);
+  placeBone(arm.fore, _E, _H);
+  arm.elbow.position.copy(_E);
+  arm.hand.position.copy(_H);
+}
+
+function buildProfessor(){
+  const root = new THREE.Group();
+  const HIP_Y = 1.5;
+  const skin = new THREE.MeshLambertMaterial({color:0xf1c3a0});
+  const P = { root, skin, legs:{}, arms:{} };
+  const PANTS = 0x3b3f4a, TWEED = 0x8a6a45;
+
+  [-1,1].forEach(s=>{
+    const hip = new THREE.Group(); hip.position.set(s*0.27, HIP_Y, 0); root.add(hip);
+    add(hip, box(0.36,0.72,0.36), PANTS, 0,-0.36,0);
+    const knee = new THREE.Group(); knee.position.y = -0.72; hip.add(knee);
+    const shin = add(knee, box(0.3,0.68,0.3), PANTS, 0,-0.34,0);
+    add(knee, box(0.32,0.14,0.32), 0xe8e8e8, 0,-0.58,0);
+    add(knee, box(0.34,0.16,0.6), 0x4a2f1f, 0,-0.70,0.1);
+    P.legs[s] = {hip, knee, shin};
+  });
+
+  const upper = new THREE.Group(); upper.position.y = HIP_Y; root.add(upper); P.upper = upper;
+  add(upper, box(0.95,0.26,0.5), PANTS, 0,0.08,0);
+  add(upper, box(1.0,1.05,0.56), TWEED, 0,0.62,0);
+  add(upper, box(0.34,0.95,0.06), 0xf6f2e6, 0,0.66,0.29);
+  add(upper, box(0.13,0.62,0.04), 0xb3262d, 0,0.58,0.33);
+  add(upper, box(0.17,0.14,0.05), 0x8f1c22, 0,0.92,0.33);
+  add(upper, box(0.16,0.12,0.04), 0x5d4529, 0.3,0.78,0.29);          // 가슴 주머니
+  add(upper, box(0.07,0.14,0.04), 0x2b6cb0, 0.3,0.88,0.3);           // 꽂힌 펜
+  add(upper, box(0.22,0.2,0.22), skin, 0,1.22,0);
+
+  const head = new THREE.Group(); head.position.y = 1.64; upper.add(head); P.head = head;
+  const skull = new THREE.Mesh(sph(0.46,24,18), skin); skull.scale.set(1,1.08,0.98); skull.castShadow = true; head.add(skull);
+  add(head, sph(0.17,12,10), 0xd0d0d0, 0.4,0.08,-0.05);
+  add(head, sph(0.17,12,10), 0xd0d0d0, -0.4,0.08,-0.05);
+  const back = add(head, sph(0.4,16,12), 0xcfcfcf, 0,0.02,-0.2); back.scale.set(1,0.85,0.75);
+  add(head, box(0.55,0.025,0.22), 0xb5b5b5, 0,0.49,-0.1);
+  add(head, box(0.4,0.025,0.16), 0xb5b5b5, 0.02,0.5,0.06);
+  add(head, sph(0.09,10,8), skin, 0.46,-0.02,0.02);
+  add(head, sph(0.09,10,8), skin, -0.46,-0.02,0.02);
+  add(head, sph(0.1,12,10), skin, 0,-0.04,0.47);                      // 코
+  add(head, box(0.34,0.07,0.08), 0xdadada, 0,-0.17,0.45);              // 콧수염
+  const mouth = add(head, sph(0.12,14,10), 0x4a1414, 0,-0.27,0.42, false);
+  mouth.scale.set(1,0.2,0.5); P.mouth = mouth;
+  const tongue = add(head, sph(0.07,10,8), 0xe8667a, 0,-0.31,0.44, false); tongue.visible = false; P.tongue = tongue;
+
+  P.eyes = []; P.brows = []; P.tears = [];
+  [-1,1].forEach(s=>{
+    const eg = new THREE.Group(); eg.position.set(s*0.17, 0.1, 0.4); head.add(eg);
+    const white = add(eg, sph(0.1,12,10), 0xffffff, 0,0,0, false); white.scale.z = 0.6;
+    add(eg, sph(0.045,8,6), 0x111111, 0,0,0.06, false);
+    P.eyes.push(eg);
+    const gl = add(head, new THREE.TorusGeometry(0.15,0.018,8,24), 0x222222, s*0.17,0.1,0.44, false);
+    add(head, box(0.02,0.02,0.4), 0x222222, s*0.42,0.1,0.22, false);
+    const br = add(head, box(0.24,0.05,0.05), 0x9a9a9a, s*0.17,0.29,0.44, false);
+    br.userData.s = s; P.brows.push(br);
+    const tear = add(head, sph(0.05,8,6), 0x66ccff, s*0.2,0.0,0.5, false); tear.visible = false; tear.userData.s = s; P.tears.push(tear);
+  });
+  add(head, box(0.08,0.02,0.02), 0x222222, 0,0.12,0.45, false);        // 안경 브릿지
+
+  // 어지러운 별
+  const stars = new THREE.Group(); stars.position.y = 0.72; head.add(stars); P.stars = stars; stars.visible = false;
+  const starMat = new THREE.MeshBasicMaterial({color:0xffe14a});
+  for (let i=0;i<4;i++){
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.11), starMat);
+    const a = i/4*Math.PI*2; m.position.set(Math.cos(a)*0.6, 0, Math.sin(a)*0.6); stars.add(m);
+  }
+
+  // 팔 (2-본 IK)
+  [-1,1].forEach(s=>{
+    const arm = {
+      S: new THREE.Vector3(s*0.64, 0.98, 0),
+      upper: add(upper, box(0.2,0.55,0.2), TWEED, 0,0,0),
+      fore: add(upper, box(0.17,0.55,0.17), TWEED, 0,0,0),
+      elbow: add(upper, sph(0.1,10,8), TWEED, 0,0,0),
+      hand: add(upper, sph(0.125,12,10), skin, 0,0,0)
+    };
+    add(upper, sph(0.15,12,10), TWEED, arm.S.x, arm.S.y, arm.S.z);
+    P.arms[s] = arm;
+  });
+  return P;
+}
+
+/* ================= 플레이어의 다리 (1인칭) ================= */
+function buildStudentLeg(){
+  const g = new THREE.Group(); scene.add(g);
+  const hip = new THREE.Group(); g.add(hip);
+  add(hip, box(0.42,0.95,0.42), 0x3a5a96, 0,-0.475,0);
+  const knee = new THREE.Group(); knee.position.y = -0.95; hip.add(knee);
+  add(knee, box(0.36,0.95,0.36), 0x3a5a96, 0,-0.475,0);
+  add(knee, box(0.38,0.14,0.38), 0xf2f2f2, 0,-0.82,0);
+  add(knee, box(0.42,0.22,0.8), 0xffffff, 0,-1.0,-0.14);
+  add(knee, box(0.44,0.07,0.82), 0xd9363e, 0,-1.12,-0.14);
+  add(knee, box(0.3,0.05,0.3), 0xd9363e, 0,-0.9,-0.34);
+  g.visible = false;
+  return { g, hip, knee };
+}
+
+/* ================= 파티클 ================= */
+const pool = [];
+const pGeo = new THREE.BoxGeometry(0.12,0.12,0.12);
+for (let i=0;i<280;i++){
+  const m = new THREE.Mesh(pGeo, new THREE.MeshBasicMaterial({color:0xffffff}));
+  m.visible = false; scene.add(m);
+  pool.push({m, vx:0, vy:0, vz:0, life:0, max:1, grav:9, size:1, sx:0, sy:0});
+}
+function emit(x,y,z,n,o){
+  o = o || {};
+  const cols = o.colors || [0xffe14a,0xff8a3d,0xffffff];
+  const sp = o.speed || 4;
+  let made = 0;
+  for (const p of pool){
+    if (p.life > 0) continue;
+    p.max = p.life = rand((o.life||0.9)*0.6, o.life||0.9);
+    p.m.visible = true;
+    p.m.position.set(x + rand(-.1,.1), y + rand(-.1,.1), z + rand(-.1,.1));
+    p.vx = rand(-1,1)*sp;
+    p.vy = rand(0,1)*sp*(o.up===undefined?1:o.up) + (o.lift||0);
+    p.vz = rand(-.3,1)*sp*(o.fwd===undefined?1:o.fwd);
+    p.grav = o.grav===undefined ? 9 : o.grav;
+    p.size = (o.size||1) * rand(0.7,1.3);
+    p.m.material.color.setHex(cols[(Math.random()*cols.length)|0]);
+    p.m.scale.setScalar(p.size);
+    p.sx = rand(-9,9); p.sy = rand(-9,9);
+    if (++made >= n) break;
+  }
+}
+function updateParticles(raw){
+  for (const p of pool){
+    if (p.life <= 0) continue;
+    p.life -= raw;
+    if (p.life <= 0){ p.m.visible = false; continue; }
+    p.vy -= p.grav*raw;
+    const ps = p.m.position;
+    ps.x += p.vx*raw; ps.y += p.vy*raw; ps.z += p.vz*raw;
+    if (ps.y < 0.06){ ps.y = 0.06; p.vy *= -0.4; p.vx *= 0.7; p.vz *= 0.7; }
+    p.m.rotation.x += p.sx*raw; p.m.rotation.y += p.sy*raw;
+    p.m.scale.setScalar(p.size * Math.min(1, p.life/p.max*3));
+  }
+}
+
+// 충격파 링
+const shock = new THREE.Mesh(new THREE.RingGeometry(0.3,0.4,32), new THREE.MeshBasicMaterial({color:0xfff3a0, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false}));
+shock.visible = false; scene.add(shock);
+let shockT = 1;
+
+/* ================= 오브젝트 생성 ================= */
+const room = buildRoom();
+const P = buildProfessor(); scene.add(P.root);
+const leg = buildStudentLeg();
+
+// 킥 레인 표시
+const lane = new THREE.Mesh(new THREE.PlaneGeometry(HIT_W*2, 3.8), new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.18, depthWrite:false}));
+lane.rotation.x = -Math.PI/2; lane.position.set(0, 0.03, 2.5); scene.add(lane);
+
+/* ================= 상태 ================= */
+const state = {
+  mode:'menu',          // menu | play | over
+  weeks:0, score:0, combo:0, time:TIME_LIMIT, best:0,
+  win:false, overDelay:0
+};
+try { state.best = parseInt(localStorage.getItem('jongkang-best')||'0',10) || 0; } catch(e){}
+
+const student = { x:0, tx:0, moving:0 };
+const kick = { t:-1, hit:false, dur:0.55, queue:0, lunge:0, resolved:false };
+const prof = { x:0, tx:0, vx:0, pause:0.8, phase:0, face:0, mode:'walk', hitT:0, side:1, invuln:0, lecCd:3, gest:0, drift:0, t:0, feinted:false };
+let hitstop = 0, shakeAmp = 0, shakeRoll = 0, camX = 0, bubbleT = 0, clockSpin = 0;
+
+/* ================= 오디오 ================= */
+let ac = null, muted = false, voices = [];
+function ensureAudio(){
+  try {
+    if (!ac){ const C = window.AudioContext || window.webkitAudioContext; if (C) ac = new C(); }
+    if (ac && ac.state === 'suspended') ac.resume().catch(()=>{});
+  } catch(e){}
+}
+function tone(f, d, type, vol, to){
+  if (!ac || muted) return;
+  try {
+    const t0 = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(f, t0);
+    if (to) o.frequency.exponentialRampToValueAtTime(to, t0 + d);
+    g.gain.setValueAtTime(vol || .2, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + d);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t0); o.stop(t0 + d + 0.03);
+  } catch(e){}
+}
+function noise(d, vol, f0, f1){
+  if (!ac || muted) return;
+  try {
+    const n = Math.floor(ac.sampleRate * d), b = ac.createBuffer(1, n, ac.sampleRate), data = b.getChannelData(0);
+    for (let i=0;i<n;i++) data[i] = (Math.random()*2-1) * (1 - i/n);
+    const s = ac.createBufferSource(); s.buffer = b;
+    const fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.setValueAtTime(f0, ac.currentTime);
+    if (f1) fl.frequency.exponentialRampToValueAtTime(f1, ac.currentTime + d);
+    const g = ac.createGain(); g.gain.value = vol;
+    s.connect(fl); fl.connect(g); g.connect(ac.destination); s.start();
+  } catch(e){}
+}
+const sfx = {
+  whoosh(){ noise(0.2, 0.5, 600, 2400); },
+  hit(){ tone(190, .22, 'sine', .7, 45); noise(.14, .8, 900, 300); tone(1100, .07, 'square', .12, 300); },
+  yelp(){ tone(560, .45, 'sawtooth', .09, 330); setTimeout(()=>tone(700, .35, 'sawtooth', .07, 380), 160); },
+  miss(){ noise(.15, .25, 300, 150); },
+  win(){ [523,659,784,1046,1318].forEach((f,i)=>setTimeout(()=>tone(f,.3,'triangle',.22),i*110)); },
+  lose(){ [392,349,311,262].forEach((f,i)=>setTimeout(()=>tone(f,.4,'triangle',.2),i*220)); }
+};
+function loadVoices(){ try { voices = window.speechSynthesis.getVoices() || []; } catch(e){} }
+try { if ('speechSynthesis' in window){ loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; } } catch(e){}
+function speak(text, pitch){
+  if (muted) return;
+  try {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR'; u.rate = 1.0; u.pitch = pitch || 1.5; u.volume = 1;
+    const v = voices.find(v => /^ko/i.test(v.lang));
+    if (v) u.voice = v;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  } catch(e){}
+}
+
+/* ================= UI ================= */
+const bubble = $('bubble'), bubbleTxt = $('bubbleTxt');
+function showBubble(text, yell, dur){
+  bubbleTxt.textContent = text;
+  bubble.className = yell ? 'yell' : 'say';
+  bubble.style.display = 'block';
+  bubbleT = dur;
+}
+function hideBubble(){ bubble.style.display = 'none'; bubbleT = 0; }
+const _sv = new THREE.Vector3();
+function toScreen(v){
+  _sv.copy(v).project(camera);
+  return { x:(_sv.x*0.5+0.5)*window.innerWidth, y:(-_sv.y*0.5+0.5)*window.innerHeight };
+}
+function popText(text, worldPos, cls){
+  const s = toScreen(worldPos);
+  const el = document.createElement('div');
+  el.className = 'pop ' + (cls||'');
+  el.textContent = text;
+  el.style.left = s.x + 'px'; el.style.top = s.y + 'px';
+  $('popLayer').appendChild(el);
+  setTimeout(()=>el.remove(), 1000);
+}
+function updateHud(){
+  $('weekFill').style.width = (state.weeks/TOTAL*100) + '%';
+  $('weekTxt').textContent = state.weeks + ' / ' + TOTAL + '주차';
+  $('scoreTxt').textContent = state.score.toLocaleString();
+  $('comboTxt').textContent = state.combo >= 2 ? 'COMBO x' + state.combo : '';
+  const t = Math.max(0, Math.ceil(state.time));
+  const te = $('timeTxt'); te.textContent = t; te.classList.toggle('low', t <= 10 && state.mode === 'play');
+}
+function setOverlay(html){
+  $('card').innerHTML = html;
+  $('overlay').classList.add('show');
+  $('kickBtn').classList.remove('on');
+  const b = $('startBtn'); if (b) b.addEventListener('click', e => { e.stopPropagation(); startGame(); });
+}
+function hideOverlay(){ $('overlay').classList.remove('show'); }
+function showMenu(){
+  setOverlay(
+    '<h1>🦵 교수님 정강이 차기</h1>' +
+    '<div class="sub">기말고사 시즌, 쌓인 한을 풀 시간입니다.<br>교수님의 정강이를 <b>16번</b> 걷어차면 드디어 <b>종강!</b></div>' +
+    '<div class="keys">🖱️ <b>마우스</b> 이동으로 조준 · 클릭으로 발차기<br>⌨️ <b>A D / ← →</b> 이동 · <b>Space</b> 발차기<br>📱 <b>터치</b> 드래그로 조준 · 탭하면 발차기<br>🎯 바닥의 <b>빛나는 길</b>에 교수님이 들어오면 초록색!</div>' +
+    '<button class="btn" id="startBtn">수업 시작</button>' +
+    '<div class="fine">※ 귀여운 가상 게임입니다. 실제 교수님께는 정중하게 인사드립시다 🙇</div>'
+  );
+}
+function showResult(){
+  const win = state.win;
+  const bonus = win ? Math.ceil(state.time) * 50 : 0;
+  if (win) state.score += bonus;
+  if (state.score > state.best){ state.best = state.score; try { localStorage.setItem('jongkang-best', String(state.best)); } catch(e){} }
+  updateHud();
+  setOverlay(
+    (win ? '<h1>🎉 종강!!!</h1><div class="sub">16주차 완료! 드디어 방학입니다.</div>'
+         : '<h1>😭 보강 확정…</h1><div class="sub">시간 초과! <b>' + state.weeks + ' / ' + TOTAL + '주차</b>에서 학기가 끝나지 않았어요.<br>교수님이 보강을 잡으셨습니다.</div>') +
+    '<div class="stat">점수 <b style="color:#ffd23f;font-weight:400">' + state.score.toLocaleString() + '</b>' + (win ? ' (시간 보너스 +' + bonus.toLocaleString() + ')' : '') + '</div>' +
+    '<div class="stat">최고 기록 ' + state.best.toLocaleString() + '</div>' +
+    '<div style="height:12px"></div><button class="btn" id="startBtn">' + (win ? '한 학기 더?' : '다시 도전') + '</button>'
+  );
+}
+
+/* ================= 게임 흐름 ================= */
+function pickTarget(){
+  let nx, tries = 0;
+  do { nx = rand(-3.3, 3.3); } while (Math.abs(nx - prof.x) < 1.2 && ++tries < 12);
+  prof.tx = nx; prof.feinted = false;
+}
+function startGame(){
+  ensureAudio();
+  state.mode = 'play'; state.weeks = 0; state.score = 0; state.combo = 0; state.time = TIME_LIMIT; state.win = false;
+  prof.mode = 'walk'; prof.invuln = 0.6; prof.pause = 0.9; prof.lecCd = 3;
+  kick.t = -1; kick.queue = 0;
+  hideBubble(); hideOverlay(); room.drawBoard(0); updateHud();
+  $('kickBtn').classList.add('on');
+}
+function endGame(win){
+  if (state.mode !== 'play') return;
+  state.mode = 'over'; state.win = win; state.overDelay = win ? 2.6 : 1.6;
+  $('kickBtn').classList.remove('on');
+  if (!win){
+    if (prof.mode === 'walk'){ prof.mode = 'sulk'; }
+    showBubble('보강 합시다~ 😊', false, 3);
+    sfx.lose();
+  }
+}
+function onHit(){
+  const legX = student.x + LEG_OFF;
+  state.weeks++; state.combo++;
+  const gain = 100 * Math.min(state.combo, 5);
+  state.score += gain;
+  prof.mode = 'hit'; prof.hitT = 0;
+  prof.side = legX >= prof.x ? 1 : -1;
+  prof.drift = (prof.x >= legX ? 1 : -1) * 1.3;
+  hitstop = 0.075; shakeAmp = 0.45; shakeRoll = (Math.random() < .5 ? -1 : 1);
+  sfx.hit(); sfx.yelp(); setTimeout(()=>speak(YELL), 120);
+  showBubble(YELL, true, HIT_DUR + 0.2);
+  room.drawBoard(state.weeks);
+  const hp = new THREE.Vector3(legX, 0.55, PROF_Z + 0.2);
+  emit(hp.x, hp.y, hp.z, 34, {speed:5.5, life:.8});
+  emit(hp.x, hp.y, hp.z, 10, {speed:3, life:1.1, colors:[0xffffff], size:1.6, up:1.5});
+  shock.position.copy(hp); shock.position.z += 0.3; shock.visible = true; shockT = 0;
+  popText('💥', hp, 'big');
+  popText('+' + gain.toLocaleString(), new THREE.Vector3(hp.x, hp.y + 1.3, hp.z), '');
+  if (state.combo >= 2) popText('COMBO x' + state.combo, new THREE.Vector3(hp.x, hp.y + 2.0, hp.z), 'combo');
+  updateHud();
+  if (state.weeks >= TOTAL){
+    state.mode = 'over'; state.win = true; state.overDelay = HIT_DUR + 1.8;
+    $('kickBtn').classList.remove('on');
+  }
+}
+function onMiss(){
+  state.combo = 0; kick.dur = 0.8; sfx.miss(); updateHud();
+}
+
+/* ================= 입력 ================= */
+const keys = { left:false, right:false };
+const rc = new THREE.Raycaster(), rayPlane = new THREE.Plane(new THREE.Vector3(0,0,1), -PROF_Z), rayHit = new THREE.Vector3(), ndc = new THREE.Vector2();
+let touchInfo = null;
+function setAim(e){
+  ndc.set(e.clientX/window.innerWidth*2-1, -(e.clientY/window.innerHeight)*2+1);
+  camera.updateMatrixWorld();
+  rc.setFromCamera(ndc, camera);
+  if (rc.ray.intersectPlane(rayPlane, rayHit)) student.tx = clamp(rayHit.x - LEG_OFF, -XMAX, XMAX);
+}
+function tryKick(){
+  if (state.mode !== 'play' || kick.t >= 0) return false;
+  kick.t = 0; kick.hit = false; kick.resolved = false; kick.dur = 0.55;
+  sfx.whoosh();
+  return true;
+}
+function queueKick(){ kick.queue = 0.3; }
+
+dom.addEventListener('pointermove', setAim);
+dom.addEventListener('pointerdown', e => {
+  ensureAudio(); setAim(e);
+  if (e.pointerType === 'mouse') queueKick();
+  else touchInfo = { id:e.pointerId, x:e.clientX, y:e.clientY, t:performance.now() };
+});
+dom.addEventListener('pointerup', e => {
+  if (e.pointerType !== 'mouse' && touchInfo && touchInfo.id === e.pointerId){
+    const moved = Math.hypot(e.clientX - touchInfo.x, e.clientY - touchInfo.y);
+    if (moved < 14 && performance.now() - touchInfo.t < 350) queueKick();
+    touchInfo = null;
+  }
+});
+dom.addEventListener('contextmenu', e => e.preventDefault());
+$('kickBtn').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); ensureAudio(); queueKick(); });
+$('mute').addEventListener('click', e => {
+  muted = !muted; e.currentTarget.textContent = muted ? '🔇' : '🔊';
+  if (muted){ try { window.speechSynthesis.cancel(); } catch(_){} } else ensureAudio();
+});
+window.addEventListener('keydown', e => {
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A'){ keys.left = true; e.preventDefault(); }
+  else if (k === 'ArrowRight' || k === 'd' || k === 'D'){ keys.right = true; e.preventDefault(); }
+  else if (k === ' ' || k === 'Enter' || k === 'k' || k === 'K'){
+    e.preventDefault();
+    if (e.repeat) return;
+    ensureAudio();
+    if ($('overlay').classList.contains('show')){ if (state.mode !== 'play' && !(state.mode === 'over' && state.overDelay > 0)) startGame(); }
+    else queueKick();
+  }
+});
+window.addEventListener('keyup', e => {
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false;
+  if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false;
+});
+window.addEventListener('blur', () => { keys.left = keys.right = false; });
+
+/* ================= 업데이트 ================= */
+const _wv = new THREE.Vector3(), _tgt = new THREE.Vector3(), _pole = new THREE.Vector3(), _shin = new THREE.Vector3();
+
+function updateStudent(dt){
+  const dir = (keys.right?1:0) - (keys.left?1:0);
+  if (dir) student.tx = clamp(student.tx + dir*9*dt, -XMAX, XMAX);
+  const frozen = kick.t >= 0 && kick.t < 0.32;
+  const step = (frozen ? 2 : 18) * dt;
+  const diff = student.tx - student.x;
+  const mv = clamp(diff, -step, step);
+  student.x += mv;
+  student.moving = lerp(student.moving, Math.abs(mv)/Math.max(dt,1e-4) > 1 ? 1 : 0, Math.min(1, dt*10));
+
+  // 킥 큐
+  if (kick.queue > 0){
+    kick.queue -= dt;
+    if (kick.t < 0 && (Math.abs(student.x - student.tx) < 0.2 || kick.queue <= 0)){ tryKick(); kick.queue = 0; }
+  }
+
+  // 킥 애니메이션
+  let hipR = 0.05, kneeR = -0.1, lunge = 0, show = false;
+  if (kick.t >= 0){
+    show = true;
+    kick.t += dt;
+    const t = kick.t;
+    if (!kick.hit && t >= 0.2 && t <= 0.3 && state.mode === 'play' && prof.mode === 'walk' && prof.invuln <= 0 &&
+        Math.abs(student.x + LEG_OFF - prof.x) < HIT_W){
+      kick.hit = true; onHit();
+    }
+    if (!kick.hit && !kick.resolved && t > 0.3){ kick.resolved = true; if (state.mode === 'play') onMiss(); }
+    if (t < 0.12){ const u = t/0.12; hipR = lerp(0.05,-0.15,u); kneeR = lerp(-0.1,-0.75,u); }
+    else if (t < 0.24){ const u = (t-0.12)/0.12, e = 1-(1-u)*(1-u); hipR = lerp(-0.15,0.95,e); kneeR = lerp(-0.75,-0.05,e); lunge = 1.35*e; }
+    else if (t < 0.3){ hipR = 0.95; kneeR = -0.05; lunge = 1.35; }
+    else {
+      const u = clamp((t-0.3)/(kick.dur-0.3),0,1), e = u*u*(3-2*u);
+      hipR = lerp(0.95,0.05,e); kneeR = lerp(-0.05,-0.1,e); lunge = 1.35*(1-e);
+      if (t >= kick.dur){ kick.t = -1; show = false; lunge = 0; }
+    }
+  }
+  kick.lunge = lunge;
+  leg.g.visible = show;
+  leg.g.position.set(student.x + LEG_OFF, 1.6, STUDENT_Z - lunge);
+  leg.hip.rotation.x = hipR; leg.knee.rotation.x = kneeR;
+
+  // 레인 표시
+  lane.position.x = student.x + LEG_OFF;
+  const aligned = Math.abs(student.x + LEG_OFF - prof.x) < HIT_W && prof.mode === 'walk' && prof.invuln <= 0;
+  lane.material.color.setHex(aligned ? 0x6dff8a : 0xffffff);
+  lane.material.opacity = state.mode === 'play' ? (aligned ? 0.42 : 0.16) : 0.0;
+}
+
+function updateProf(dt){
+  prof.t += dt;
+  const playing = state.mode === 'play' || state.mode === 'menu';
+  let w = 0;
+  const weeks = state.weeks;
+
+  if (prof.mode === 'hit'){
+    prof.hitT += dt;
+    const t = prof.hitT;
+    w = sstep(0, 0.16, t) * (1 - sstep(HIT_DUR - 0.35, HIT_DUR, t));
+    prof.vx *= Math.max(0, 1 - dt*10);
+    prof.x = clamp(prof.x + prof.drift*dt*Math.exp(-t*2), -3.4, 3.4);
+    prof.face += (0 - prof.face) * Math.min(1, dt*14);
+    if (t >= HIT_DUR){
+      if (state.mode === 'over') prof.mode = state.win ? 'cheer' : 'sulk';
+      else prof.mode = 'walk';
+      prof.invuln = 0.35; prof.pause = rand(0.3, 0.7); prof.tx = prof.x; prof.feinted = false;
+      if (prof.mode === 'cheer'){ hideBubble(); showBubble('진짜 종강이다~!! 🎉', true, 3); sfx.win(); speak('종강이다!', 1.7); confetti(); }
+    }
+  } else if (prof.mode === 'walk'){
+    prof.invuln = Math.max(0, prof.invuln - dt);
+    const spd = state.mode === 'play' ? 1.7 + weeks*0.22 : 1.5;
+    let desired = 0;
+    if (prof.pause > 0){
+      prof.pause -= dt;
+      if (prof.pause <= 0) pickTarget();
+    } else {
+      const dx = prof.tx - prof.x;
+      if (Math.abs(dx) < 0.08){ prof.pause = rand(0.3,1.1) * Math.max(0.35, 1 - weeks*0.045); }
+      else {
+        desired = Math.sign(dx) * spd;
+        if (state.mode === 'play' && !prof.feinted && Math.abs(dx) > 1.5 && Math.random() < dt*0.35){
+          prof.tx = clamp(prof.x - Math.sign(dx)*rand(1,2.5), -3.4, 3.4); prof.feinted = true;
+        }
+      }
+    }
+    prof.vx += (desired - prof.vx) * Math.min(1, dt*9);
+    prof.x = clamp(prof.x + prof.vx*dt, -3.4, 3.4);
+    const mvAbs = Math.abs(prof.vx);
+    const faceTarget = mvAbs > 0.7 ? Math.sign(prof.vx) * Math.PI/2 : 0;
+    prof.face += (faceTarget - prof.face) * Math.min(1, dt*8);
+
+    // 가끔 강의 멘트
+    if (state.mode === 'play' && prof.pause > 0.35 && bubbleT <= 0){
+      prof.lecCd -= dt;
+      if (prof.lecCd <= 0){ showBubble(LECTURE[(Math.random()*LECTURE.length)|0], false, 1.8); prof.lecCd = rand(4,7); }
+    }
+  } else {
+    // cheer / sulk
+    prof.vx *= Math.max(0, 1 - dt*8);
+    prof.face += (0 - prof.face) * Math.min(1, dt*8);
+  }
+
+  // ---- 포즈 계산 ----
+  const mvAbs = Math.abs(prof.vx);
+  prof.phase += dt * (2 + mvAbs*1.5);
+  const amp = prof.mode === 'walk' ? clamp(mvAbs*0.16, 0, 0.75) : 0;
+  const talk = (prof.mode === 'walk' && prof.pause > 0 && state.mode === 'play') ? 1 : 0;
+  prof.gest += (talk - prof.gest) * Math.min(1, dt*6);
+  const hitT = prof.hitT;
+
+  [-1,1].forEach(s=>{
+    const lg = P.legs[s];
+    const ph = prof.phase + (s > 0 ? 0 : Math.PI);
+    let hip = Math.sin(ph) * amp;
+    let knee = (Math.sin(ph + 1.4)*0.5 + 0.5) * amp * 1.1;
+    if (prof.mode === 'hit'){
+      if (s === prof.side){ hip = lerp(hip, -1.0 + 0.05*Math.sin(hitT*14), w); knee = lerp(knee, 1.3, w); }
+      else { hip = lerp(hip, 0, w); knee = lerp(knee, 0.25*Math.abs(Math.sin(hitT*9)), w); }
+    } else if (prof.mode === 'cheer'){
+      hip = 0; knee = 0.35*Math.abs(Math.sin(prof.t*9));
+    } else if (prof.mode === 'sulk'){ hip = 0; knee = 0; }
+    lg.hip.rotation.x = hip; lg.knee.rotation.x = knee;
+  });
+
+  const bend = 1.3 * w + (prof.mode === 'hit' ? 0.06*Math.sin(hitT*10)*w : 0);
+  P.upper.rotation.x = bend;
+  P.head.rotation.x = -0.9 * w + (prof.mode === 'sulk' ? 0.05 : 0);
+  P.head.rotation.y = prof.mode === 'hit' ? Math.sin(hitT*12)*0.25*w : (prof.mode === 'walk' ? 0 : 0);
+  P.head.rotation.z = prof.mode === 'hit' ? Math.sin(hitT*8)*0.15*w : 0;
+
+  let hop = Math.abs(Math.sin(prof.phase)) * amp * 0.1;
+  if (prof.mode === 'hit') hop += w * Math.abs(Math.sin(hitT*9)) * 0.3;
+  if (prof.mode === 'cheer') hop = 0.35*Math.abs(Math.sin(prof.t*9));
+  const recoil = prof.mode === 'hit' ? 0.35*Math.exp(-hitT*7) : 0;
+  P.root.position.set(prof.x, hop, PROF_Z - recoil);
+  P.root.rotation.y = prof.face + (prof.mode === 'hit' ? Math.sin(hitT*5)*0.35*w : 0);
+  P.root.rotation.z = prof.mode === 'hit' ? Math.sin(hitT*8)*0.09*w : 0;
+
+  P.root.updateMatrixWorld(true);
+
+  // 팔 IK
+  let shinOK = false;
+  if (w > 0.001){
+    P.legs[prof.side].shin.getWorldPosition(_shin);
+    shinOK = true;
+  }
+  [-1,1].forEach(s=>{
+    const arm = P.arms[s];
+    const swing = Math.sin(prof.phase + (s > 0 ? 0 : Math.PI)) * amp * 1.6;
+    _tgt.set(s*0.74, -0.02, 0.08 + swing*0.5);
+    _pole.set(s*1, -0.25, -0.6);
+    // 강의 제스처
+    if (prof.gest > 0.01 && s === 1){
+      _wv.set(0.62, 0.8 + 0.2*Math.sin(prof.t*3.2), 0.9);
+      _tgt.lerp(_wv, prof.gest);
+    }
+    if (prof.mode === 'cheer'){
+      _tgt.set(s*0.8, 1.9 + 0.15*Math.sin(prof.t*10 + s), 0.15);
+      _pole.set(s*1, 0, -0.5);
+    } else if (prof.mode === 'sulk'){
+      _tgt.set(-s*0.3, 0.55, 0.5);
+      _pole.set(0, -0.6, 0.3);
+    }
+    if (shinOK){
+      _wv.set(_shin.x + s*0.12, _shin.y + 0.07*s, _shin.z + 0.05);
+      P.upper.worldToLocal(_wv);
+      _tgt.lerp(_wv, w);
+      _pole.lerp(_wv.set(s*1, 0.2, -0.3), w);
+    }
+    solveArm(arm, _tgt, _pole);
+  });
+
+  // 표정
+  const pain = prof.mode === 'hit' ? w : 0;
+  const open = talk ? 0.2 + 0.55*Math.abs(Math.sin(prof.t*13)) : (prof.mode === 'cheer' ? 1.0 : (prof.mode === 'sulk' ? 0.35 : 0.2));
+  P.mouth.scale.set(1 + 0.1*pain, lerp(open, 1.7, pain), 0.5 + 0.1*pain);
+  P.tongue.visible = pain > 0.5;
+  P.eyes.forEach(e => { e.scale.y = lerp(1, 0.14, Math.min(1, pain*1.4)); });
+  P.brows.forEach(b => { b.rotation.z = -b.userData.s * 0.5 * pain; b.position.y = 0.29 + 0.05*pain; });
+  P.tears.forEach(t => {
+    t.visible = pain > 0.4;
+    t.position.y = -0.02 - ((prof.t*1.8 + (t.userData.s>0?0:0.5)) % 1) * 0.3;
+    t.position.x = t.userData.s * 0.2;
+  });
+  P.skin.color.setRGB(lerp(0.945,1.0,pain*0.6), lerp(0.765,0.45,pain*0.6), lerp(0.627,0.42,pain*0.6));
+  P.stars.visible = pain > 0.25;
+  P.stars.rotation.y += dt*7;
+}
+
+function confetti(){
+  const cols = [0xff4d6d,0xffd23f,0x4dd2ff,0x7dff7d,0xc77dff,0xffffff];
+  for (let i=0;i<110;i++){
+    emit(rand(-4,4), rand(5,9), rand(-1,4), 1, {colors:cols, speed:1.2, up:0, fwd:0.3, grav:1.8, life:3.4, size:1.2});
+  }
+  setTimeout(()=>{ if (state.mode === 'over' && state.win) for (let i=0;i<90;i++) emit(rand(-4,4), rand(5,9), rand(-1,4), 1, {colors:cols, speed:1.2, up:0, fwd:0.3, grav:1.8, life:3.4, size:1.2}); }, 600);
+}
+
+function updateCamera(raw){
+  camX += (student.x - camX) * Math.min(1, raw*10);
+  shakeAmp = Math.max(0, shakeAmp - raw*2.2);
+  const sx = (Math.random()*2-1)*shakeAmp*0.18, sy = (Math.random()*2-1)*shakeAmp*0.14;
+  camera.position.set(camX + sx, 2.7 + sy, STUDENT_Z + 0.2 - kick.lunge*0.3);
+  const lookX = camX + (prof.x - camX) * 0.4;
+  camera.lookAt(lookX, 1.6, 0.6);
+  camera.rotateZ(shakeRoll * shakeAmp * 0.05);
+}
+
+function resize(){
+  const w = window.innerWidth, h = window.innerHeight, asp = w/h;
+  renderer.setSize(w, h, false);
+  camera.aspect = asp;
+  let fov = 66;
+  if (asp < 1.4){
+    const need = 2*Math.atan(Math.tan(37.5*Math.PI/180)/asp) * 180/Math.PI;   // 가로 시야각 최소 75°
+    fov = Math.min(100, Math.max(66, need));
+  }
+  camera.fov = fov;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ================= 메인 루프 ================= */
+let last = performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const raw = Math.min(0.05, (now - last)/1000); last = now;
+  let dt = raw;
+  if (hitstop > 0){ hitstop -= raw; dt = 0; }
+
+  if (state.mode === 'play'){
+    state.time -= dt;
+    if (state.time <= 0){ state.time = 0; endGame(false); }
+    updateHud();
+  }
+  if (state.mode === 'over'){
+    state.overDelay -= raw;
+    if (state.overDelay <= 0 && $('overlay').classList.contains('show') === false) showResult();
+  }
+
+  updateStudent(dt);
+  updateProf(dt);
+  updateParticles(raw);
+
+  // 충격파
+  if (shock.visible){
+    shockT += raw / 0.35;
+    if (shockT >= 1){ shock.visible = false; }
+    else { shock.scale.setScalar(1 + shockT*7); shock.material.opacity = 0.9*(1-shockT); }
+  }
+
+  // 시계
+  clockSpin += raw * (state.mode === 'play' ? 1.6 : 0.3);
+  room.hand.rotation.z = -clockSpin*2;
+  room.hand2.rotation.z = -clockSpin*0.15;
+
+  updateCamera(raw);
+
+  // 말풍선
+  if (bubbleT > 0){
+    bubbleT -= raw;
+    if (bubbleT <= 0) hideBubble();
+    else {
+      P.head.getWorldPosition(_wv); _wv.y += 0.75;
+      const s = toScreen(_wv);
+      const W = window.innerWidth, H = window.innerHeight;
+      bubble.style.left = clamp(s.x, 110, W-110) + 'px';
+      bubble.style.top = Math.max(90, s.y) + 'px';
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+
+showMenu();
+updateHud();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
